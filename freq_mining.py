@@ -4,7 +4,7 @@
 
 import os.path
 import numpy as np
-
+from scipy.special import comb as nCr
 
 
 
@@ -32,81 +32,7 @@ def read_file(fPath,delimiter):
 
     return originalData,nItems
 
-
-
-
-def startListRecursion(freqGraph,nItems,lst):
-    
-    '''
-    Parameters:
-        freqGraph: The data structure(eg. [ [#,[]],...] that is storing the frequency of each subset and the child nodes
-        nItems:  The number of unique elements in the Dataset
-        lst: The entire set [1,2,3,..] that is being analyzed
-    '''
-    
-    
-    
-    size = len(lst)
-    
-    if size > 1 :    
-        
-        tle = lst[0]
-        
-        ref = freqGraph[tle]
-        
-        nextLevel(ref , nItems, 0, lst)
-        
-        freqGraph[ lst[0] ][0] += 1
-    
-    elif size == 1:
-        # GETS THE ELEM OF INDEZ (lst[0]), 
-        # THEN ADDS 1 TO THE FREQUENCY COUNTER
-        freqGraph[ lst[0] ][0] += 1
-    else:
-        print('empty')
-    
-        
-    return freqGraph
-
-
-
-def nextLevel(lvlArray,nItems, prevLvl, lst):
-    
-    '''
-    Parameters:
-        lvlArray: an Array of form (#, []) where the first elem is the frequency counter and [] is the child array
-        nItems: the number of unique elements in the Dataset
-        prevLvl: The level number where this function is called 
-        lst: The entire set [1,2,3,..] that is being analyzed
-    '''
-    
-    
-    curLvl = prevLvl + 1
-    
-    remSize = len(lst[curLvl:])
-    
-    
-    if remSize > 1 :
-        
-        
-        if len(lvlArray[1]) == 0:
-        
-            newLvl = [ [0,[]] for i in range( lst[curLvl], nItems  ) ]
-            lvlArray[1] = newLvl 
-            
-        
-        # THIS LEVEL'S ELEMENT INDEX
-        tleIx =  (lst[curLvl] - lst[prevLvl] ) - 1
-
-        ref = lvlArray[1][tleIx] 
-    
-        nextLevel( ref ,nItems, curLvl, lst)
-          
-    
-    
-    lvlArray[0] += 1
-    
-    
+   
 
 
 def main(fPath, delimiter, minSuppRate):
@@ -124,25 +50,79 @@ def main(fPath, delimiter, minSuppRate):
     # nItems: number of unique elements in the dataset
     DATASET,nItems = read_file(fPath,delimiter)
     
+    ########################
+    ###  INITIALIZATION  ###
+    ########################
+    
+    # SINGLE ITEM FREQUENCY ARRAY [0,1,2,......,]
+    # EACH INDEX IS AN 'ITEM'
+    sif = np.zeros(nItems+1)    
+    
+    # NUMBER OF TRANSACTIONS        
+    nTrans = len(DATASET)  
+    
+    # MINIMUM SUPPORT ( RATE * # OF TRANSACTIONS)
+    minSupp = int(round(minSuppRate*nTrans,0))
+    
+
+    # ADD 1 TO THE ITEM IF IT'S IN THE TRANSACTION
+    for trn in DATASET:
+        sif[trn]+=1    
+    
+    logicalIx = sif > minSupp
+    
+    # STORE THE 'ITEMS' THAT HAD A FREQUENCY > 'minSupp'
+    # fi: FREQUENT ITEMS
+    fi = np.where( logicalIx == 1)[0]
+    
+    # NUMBER OF 'fi'
+    nfi = len(fi)
+    
+    # ffi: FREQUENCY OF FREQUENT ITEMS
+    ffi = sif[fi]
+    
+    # INDECES OF THE SORTED 'ffi' IN ASCENDING ORDER
+    idxSort = np.argsort(ffi)[::-1]
+    
+    
+    # AT THE MOMENT, THIS WILL ONLY WORK FOR 'fi' GREATER THAN 3
+    
+    # CREATE AN nCr(nfi,3) ARRAY 
+    sub3 = [[] for i in range(int(nCr(nfi,3)))]
+    
+    # CREATE AN nCr(nfi,2) ARRAY
+    sub2 = np.zeros(int(nCr(nfi,2)))
+    
+    
+    # CREATE A HASHKEY TO MAP ITEMSETS TO APPROPIATE SUBSETS
+    hashkey = np.zeros((nfi-1,2))
+    
+    for ii in range(nfi-1):
+        for kk in [1,2]:
+            
+            hashkey[ii,kk-1] = nCr(ii,kk)
+    
+    print(hashkey)
+
+    ######################
+    ###  COMPUTATIONS  ###
+    ######################
+    
+    
+    
+    # for trn in DATASET:
+        
+    #     c = trn[logicalIx]
+    #     cl = len(c)
+        
+        
+        
+        
+    
 
 
-    ##### CREATE FREQUENCY GRAPH DATA STRUCTURE #####
-    
-    # CREATE A LIST OF LISTS, WERE THE FIRST ELEMENET CONTAINS THE FREQUENCY
-    # AND THE SECOND ELEMENT CONTAINS THE NEXT LEVEL
-    lvl0 = [ [0,[]] for i in range( nItems +1 ) ]
-    
-    freqGraph = lvl0
 
-    for lst in DATASET:
-        
-         freqGraph = startListRecursion(freqGraph, nItems , lst)
-        
-        
-    ### READ THE FREQUENCY GRAPH TO COLLECT THE SUBSETS THAT PASS THE 'minSuppRate' ###
-         
-    
-    ### TO BE CONTINUED
+
 
 
 
@@ -150,11 +130,11 @@ def main(fPath, delimiter, minSuppRate):
 if __name__ == '__main__':
     
     directory = './data/'
-    filename = 'smallSet.csv'
+    filename = 'nTrn50_nItems7.csv'
     file_path = os.path.join(directory, filename)
     
     
     delimiter="," 
-    minSuppRate=0.025 
+    minSuppRate= 0.3
     
     main(file_path,delimiter,minSuppRate)
