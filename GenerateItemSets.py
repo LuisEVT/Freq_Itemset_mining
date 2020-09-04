@@ -10,7 +10,7 @@ import numpy as np
 nTrn = 50
 
 # MAX ITEM ID
-nItems = 7
+nItems = 5
 
 # ARRAY WILL STORE TRANSACTIONS
 trArray = []
@@ -33,8 +33,8 @@ for idx in range(nTrn):
     for ii in range(curItemsetSize):
         arr[ii] =  randint(1,10)
 
-    # APPEND ITEMSET INTO THE TRANSACTION ARRAY
-    trArray.append(arr)
+    # APPEND UNIQUE ELEM ITEMSET INTO THE TRANSACTION ARRAY
+    trArray.append(set(arr))
 
 # CREATE A HEADER
 heading = [ kk for kk in range(1,maxSize+1)]

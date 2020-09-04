@@ -73,16 +73,24 @@ def main(fPath, delimiter, minSuppRate):
     
     # STORE THE 'ITEMS' THAT HAD A FREQUENCY > 'minSupp'
     # fi: FREQUENT ITEMS
-    fi = np.where( logicalIx == 1)[0]
+    fi = np.where( logicalIx )[0].astype(int)
     
     # NUMBER OF 'fi'
     nfi = len(fi)
     
+    # WILL BE USED IN PLACE OF THE 'fi' FOR THE ALGORITHM
+    proxyIID = np.arange(1,nfi+1)
+
+    
+    print(nfi, '  ', fi)
     # ffi: FREQUENCY OF FREQUENT ITEMS
     ffi = sif[fi]
     
     # INDECES OF THE SORTED 'ffi' IN ASCENDING ORDER
     idxSort = np.argsort(ffi)[::-1]
+    
+    # REMAINING ITEMSET ARRAY
+    ris = [ [] for ii in range(nTrans) ] 
     
     
     # AT THE MOMENT, THIS WILL ONLY WORK FOR 'fi' GREATER THAN 3
@@ -101,23 +109,57 @@ def main(fPath, delimiter, minSuppRate):
         for kk in [1,2]:
             
             hashkey[ii,kk-1] = nCr(ii,kk)
-    
-    print(hashkey)
 
+    print(hashkey)
     ######################
     ###  COMPUTATIONS  ###
     ######################
     
+    indicator = np.zeros(nItems+1,dtype=bool)
     
+    for trnIdx,trn in enumerate(DATASET):
+        
+        
+        
+        # GET FREQUENT ITEMS FROM CURRENT ITEMSET
+        # FREQUENT ITEMS ARE SORTED BASED ON THE 'ffi'
+        indicator[trn] = 1
+        gfi = proxyIID[ indicator[ fi[idxSort] ] ]  # [1,2,....]  (1: most freq )
+        
+        
+        
+        
+        # GET THE SIZE OF THE 'gfi'
+        n_gfi = len(gfi)
+        
+        
+        if n_gfi > 3:
+            
+            # STORE THE REMAINING ITEMSET AFTER TAKING OUT THE LAST THREE ELEMS
+            ris[trnIdx] = gfi[:-3]
+            
+            # KEEP A REFERENCE TO THE LAST THREE ELEMS IN THE ITEMSET
+            ref = gfi[-3:]
+            
+            key = np.sum(hashkey[ :(ref[0]-2) , 1],dtype = int) + np.sum(hashkey[ :(ref[1]-2) , 0],dtype=int) + ref[2] - 1
+            
+            sub3[key].append(trnIdx)
+
+        
+        elif n_gfi == 2:
+            
+            ris[trnIdx] = None
+            
+            ref = gfi[-2:]
+            key = np.sum(hashkey[ :(ref[0]-2) , 0],dtype=int) + ref[1] - 1
+                    
+        
+            sub2[key] +=1
+        
+        indicator[trn] = 0
     
-    # for trn in DATASET:
-        
-    #     c = trn[logicalIx]
-    #     cl = len(c)
-        
-        
-        
-        
+    for idx,trn in enumerate(sub2):
+        print(idx,' ',trn)  
     
 
 
@@ -130,11 +172,11 @@ def main(fPath, delimiter, minSuppRate):
 if __name__ == '__main__':
     
     directory = './data/'
-    filename = 'nTrn50_nItems7.csv'
+    filename = 'nTrn50_nItems5.csv'
     file_path = os.path.join(directory, filename)
     
     
     delimiter="," 
-    minSuppRate= 0.3
+    minSuppRate= 0.2
     
     main(file_path,delimiter,minSuppRate)
