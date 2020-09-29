@@ -116,9 +116,10 @@ def main(fPath, delimiter, minSuppRate):
     # WILL BE USED TO SELECT THE ITEMS PER TRANSACTION
     indicator = np.zeros(nItems+1,dtype=bool)
     
-    print('sff:{}'.format(ffi[idxSort]))
+    #print('sff:{}'.format(ffi[idxSort]))
     print('sfi:{}'.format(sfi))
     print('pro:{}'.format(proxyIID))
+    
     
     
     
@@ -177,7 +178,6 @@ def main(fPath, delimiter, minSuppRate):
   
     
     # a < b in terms of frequency
-    # a != b
     for a in range(nfi):
         for b in range(nfi - (a+1)): # PROXY VALUE SHIFT BY (a+1) 
         
@@ -224,13 +224,13 @@ def main(fPath, delimiter, minSuppRate):
                 ## CONDITION 3
                 ################
 
-                # FIND c' and c" SUCH WHERE max(|L_a_c|) , WHERE max(|L"_a_c|) 
+                # FIND c' and c" SUCH WHERE max(|L_a_c|) , WHERE max(|L"_a_c|) and c < b
                 cp = np.argmax(  [len(struc2D[a][i][2]) for i in range(b)]  )
                 cpp = np.argmax( [len(struc2D[a][i][3]) for i in range(b)]  )
     
 
                 # | L'_ac| < |L"_ac|
-                if len(struc2D[a][cp][2]) < len(struc2D[a][cpp][3]):
+                if len(struc2D[a][cp][2]) <= len(struc2D[a][cpp][3]):
 
                     # REDISTRIBUTE L"_ac" to L"_bc
     
@@ -243,12 +243,11 @@ def main(fPath, delimiter, minSuppRate):
                         # MAKE SURE THAT THE ITEMSET HAS ANOTHER ELEM TO POINT
                         if len(curItem) > pointer+1 :
                             
+                            # L"_ac" to L"_ac , where c is the next elem
+                            c =  curItem[pointer+1]
+                            proxC = c - (a+1)
+                            struc2D[a][proxC][3].append( [pointer+1 , TID] ) 
                             
-                            proxB = curItem[pointer]
-                            proxC = curItem[pointer+1] - (proxB+1)
-                                                    
-
-                            struc2D[proxB][proxC][3].append( [pointer+1 , TID] ) 
                             
                     # EMPTY OUT L"_ac"
                     struc2D[a][cpp][3] = []
@@ -258,17 +257,20 @@ def main(fPath, delimiter, minSuppRate):
                     
                     # REDISTRIBUTE L'_ac' to L"_bc
                     
-                    # ITERATE THROUGH THE ELSM STORED IN L'_ac'
+                    # ITERATE THROUGH THE ELEMS STORED IN L'_ac'
                     for TID in struc2D[a][cp][2]:
     
                         curItem = DATASET[TID]   
                         
-                        c = curItem[0]      
-                        proxB = cp +(a+1) # SHIFT BY (a+1) 
-                        proxC = c - (proxB+1) # SHIFT BY (ProxB + 1)
-
                         
-                        struc2D[proxB][proxC][3].append([1,TID])
+                        if len(curItem) > 1:
+                            
+                            # L'_ac' to L"_ac, where c is the next elem
+                            c = curItem[1]
+                            proxC = c - (a+1)
+                            
+                            struc2D[a][proxC][3].append([1,TID])
+                        
                       
                     # EMPTY OUT L'a_c'
                     struc2D[a][cp][2] = []
@@ -332,9 +334,8 @@ def main(fPath, delimiter, minSuppRate):
     print('-----------------------------')
     for a,b,freq in freq_marker:
         
-        #print( (sfi[a],sfi[b]), ':',NL[a][b])
-        #print( (a,b), ':',NL[a][b])
-        print('Proxy:({},{}) Actual:({},{}) minFreq: {}'.format(a,b+(a+1),sfi[a],sfi[b+(a+1)],freq))
+        #print('Proxy:({},{}) Actual:({},{}) minFreq: {}'.format(a,b+(a+1),sfi[a],sfi[b+(a+1)],freq))
+        print('Itemset:({},{}) minFreq: {}'.format(sfi[a],sfi[b+(a+1)],freq))
             
     print('-----------------------------')
 
@@ -360,7 +361,7 @@ if __name__ == '__main__':
     # delimiter="," 
     # minSuppRate= 0.15
     
-    ### KOSARAK DATASET
+    # ### KOSARAK DATASET
     filename = 'kosarak.dat'
     file_path = os.path.join(directory, filename)
     delimiter=" "   
