@@ -208,7 +208,7 @@ def main(fPath, delimiter, minSuppRate):
                 ## CONDITION 2
                 ################                
                 
-                #print("({},{}): N:{}  L:{}  Lp:{}  Lpp:{}".format(a,b,struc2D[a][b][0],len(struc2D[a][b][1]),sum([len(struc2D[a][i][2]) for i in range(b+1)]),sum([len(struc2D[a][i][3]) for i in range(b+1)])))
+                #print("({},{}): N:{}  L:{}  Lp:{}  Lpp:{}".format(sfi[a],sfi[b+(a+1)],struc2D[a][b][0],len(struc2D[a][b][1]),sum([len(struc2D[a][i][2]) for i in range(b+1)]),sum([len(struc2D[a][i][3]) for i in range(b+1)])))
 
                 # N_a_b  + |L_a_b| + (  |L'_a_0| + ... + |L'_a_b|) + ( |L''_a_0|+ ...  + |L''_a_b| )
                 predThreshold = struc2D[a][b][0] + len(struc2D[a][b][1]) + sum([len(struc2D[a][i][2]) for i in range(b+1)]) + sum([len(struc2D[a][i][3]) for i in range(b+1)])
@@ -262,14 +262,17 @@ def main(fPath, delimiter, minSuppRate):
     
                         curItem = DATASET[TID]   
                         
+                        # L'_ac' to L"_ac, where c is the next elem
+                        c = curItem[0]
+                        proxC = c - (a+1)
                         
-                        if len(curItem) > 1:
+                        if len(curItem) == 1:
                             
-                            # L'_ac' to L"_ac, where c is the next elem
-                            c = curItem[1]
-                            proxC = c - (a+1)
-                            
-                            struc2D[a][proxC][3].append([1,TID])
+                            struc2D[a][proxC][0] += 1                            
+                        
+                        else:
+
+                            struc2D[a][proxC][3].append([0,TID])
                         
                       
                     # EMPTY OUT L'a_c'
@@ -280,7 +283,7 @@ def main(fPath, delimiter, minSuppRate):
             
             # REDISTRIBUTE L_ab to L'ac and also to L_bc
             # ITERATE THROUGH THE ELEMS STORED IN L_ab
-            for idx,tid in enumerate(struc2D[a][b][1]):
+            for tid in struc2D[a][b][1]:
                 
                 curItem = DATASET[tid]
                 c = curItem[0]
@@ -330,12 +333,13 @@ def main(fPath, delimiter, minSuppRate):
     print('Total time:       ',t3-t1)
 
     print('')
-    print('Freq 2-Itemsets')
+    print('Itemset: Min Freq.')
     print('-----------------------------')
+    
     for a,b,freq in freq_marker:
         
         #print('Proxy:({},{}) Actual:({},{}) minFreq: {}'.format(a,b+(a+1),sfi[a],sfi[b+(a+1)],freq))
-        print('Itemset:({},{}) minFreq: {}'.format(sfi[a],sfi[b+(a+1)],freq))
+        print('({},{}): {}'.format(sfi[a],sfi[b+(a+1)],freq))
             
     print('-----------------------------')
 
@@ -366,7 +370,6 @@ if __name__ == '__main__':
     file_path = os.path.join(directory, filename)
     delimiter=" "   
     minSuppRate = 0.025
-    
     
     
     
