@@ -39,7 +39,88 @@ def read_file(fPath,delimiter):
 
     return originalData,nItems
 
-   
+
+
+def recFunction( recStruc, prefix , minSupp , nfi, dataset ): 
+    # (recStruc, [a,b], minSupp, nfi ,DATASET) 
+    
+    freq_marker = []
+    
+    for c in range(len(recStruc)):
+        
+        
+        minThreshold = recStruc[c][0] + len(recStruc[c][1]) 
+        #print([prefix+[c + (prefix[-1]+1) ]], minThreshold)
+        
+        #print(prefix+[c], minThreshold)
+        if minThreshold >= minSupp :
+            
+            proxC = c + (prefix[-1]+1)
+            
+            freq_marker.append([prefix+[proxC], minThreshold])
+        
+            
+            recStruc2 = [ [0,[]] for i in range(nfi - (proxC+1)) ]
+            
+            
+            for pointer,TID in recStruc[c][1]:
+            
+                curItem  = dataset[TID]
+                
+                
+                if len(curItem) == pointer + 2 :
+                                       
+                    d = curItem[pointer+1]
+                    proxD = d - (proxC+1) 
+                    recStruc2[proxD][0] += 1
+                    
+                    
+                # MAKE SURE THAT THE ITEMSET HAS ANOTHER ELEM TO POINT
+                if len(curItem) > pointer + 2 :    
+                   
+                   d = curItem[pointer+1]
+                   proxD = d - (proxC+1) 
+                   recStruc2[proxD][1].append([pointer+1,TID])      
+               
+
+            mark = recFunction( recStruc2, prefix+[proxC] , minSupp , nfi, dataset )
+            
+            freq_marker.extend(mark)
+            
+            
+            
+        
+            
+        for pointer,TID in recStruc[c][1]:
+            
+            curItem  = dataset[TID]
+            
+            # MAKE SURE THAT THE ITEMSET HAS ANOTHER ELEM TO POINT
+            if len(curItem) > pointer+1 :    
+               
+               d = curItem[pointer+1]
+               proxD = d - (prefix[-1]+1) 
+               recStruc[proxD][1].append([pointer+1,TID])      
+               
+            recStruc[c][1] = []
+                
+                
+    return freq_marker
+                
+
+# curItem = DATASET[TID]
+
+# # MAKE SURE THAT THE ITEMSET HAS ANOTHER ELEM TO POINT
+# if len(curItem) > pointer+1 :
+
+# # L"_ac" to L"_ac , where c is the next elem
+# c =  curItem[pointer+1]
+# proxC = c - (a+1)
+# struc2D[a][proxC][3].append( [pointer+1 , TID] ) 
+
+
+# # EMPTY OUT L"_ac"
+# struc2D[a][cpp][3] = []
 
 
 
@@ -183,7 +264,7 @@ def main(fPath, delimiter, minSuppRate):
         
             # STATE IF FREQ. OF (a,b)-ITEMSET HAS BEEN DETERMINED
             Done = False
-            
+            isFreq = False
             while(not(Done)):
                 
                 
@@ -198,17 +279,17 @@ def main(fPath, delimiter, minSuppRate):
                 
                 # CHECK IF FREQ. IS GREATER THAN THE MIN SUPPORT
                 if minThreshold >= minSupp:
-
+                    isFreq = True
                     Done = True
                     # MARK (a,b)-ITEMSET AS FREQ.
-                    freq_marker.append([a,b,minThreshold])
+                    freq_marker.append([[a,b+(a+1)],minThreshold])
                     continue 
                 
                 ################
                 ## CONDITION 2
                 ################                
                 
-                #print("({},{}): N:{}  L:{}  Lp:{}  Lpp:{}".format(sfi[a],sfi[b+(a+1)],struc2D[a][b][0],len(struc2D[a][b][1]),sum([len(struc2D[a][i][2]) for i in range(b+1)]),sum([len(struc2D[a][i][3]) for i in range(b+1)])))
+                #print("({},{}): N:{}  L:{}  Lp:{}  Lpp:{}".format(a,b,struc2D[a][b][0],len(struc2D[a][b][1]),sum([len(struc2D[a][i][2]) for i in range(b+1)]),sum([len(struc2D[a][i][3]) for i in range(b+1)])))
 
                 # N_a_b  + |L_a_b| + (  |L'_a_0| + ... + |L'_a_b|) + ( |L''_a_0|+ ...  + |L''_a_b| )
                 predThreshold = struc2D[a][b][0] + len(struc2D[a][b][1]) + sum([len(struc2D[a][i][2]) for i in range(b+1)]) + sum([len(struc2D[a][i][3]) for i in range(b+1)])
@@ -278,8 +359,129 @@ def main(fPath, delimiter, minSuppRate):
                     # EMPTY OUT L'a_c'
                     struc2D[a][cp][2] = []
              
-                    
              
+             
+            
+            
+            if isFreq:
+                
+                # UNBOX ALL L' AND L''            
+                
+                for i in range(b):
+                    
+                    
+                        # ITERATE THROUGH THE ELEMS STORED IN L'_ac'
+                        for TID in struc2D[a][i][2]:
+        
+                            curItem = DATASET[TID]   
+                            
+                            # L'_ac' to L"_ac, where c is the next elem
+                            c = curItem[0]
+                            proxC = c - (a+1)
+                            
+                            if len(curItem) == 1:
+                                struc2D[a][proxC][0] += 1                            
+                            else:
+                                struc2D[a][proxC][3].append([0,TID])
+                            
+                          
+                        # EMPTY OUT L'a_c'
+                        struc2D[a][i][2] = []                      
+                    
+                    
+                    
+                    # ITERATE THROUGH THE ELEMS STORED IN L"_ac"
+                        for pointer,TID in struc2D[a][i][3]:
+                            
+                            curItem = DATASET[TID]
+                            
+                            # MAKE SURE THAT THE ITEMSET HAS ANOTHER ELEM TO POINT
+                            if len(curItem) > pointer+1 :
+                                
+                                # L"_ac" to L"_ac , where c is the next elem
+                                c =  curItem[pointer+1]
+                                proxC = c - (a+1)
+                                struc2D[a][proxC][3].append( [pointer+1 , TID] ) 
+                                
+                            else:
+                                c =  curItem[pointer]
+                                proxC = c - (a+1)
+                                struc2D[a][proxC][0]+=1                         
+                                
+                                
+                                
+                        # EMPTY OUT L"_ac"
+                        struc2D[a][i][3] = []
+                            
+                  
+                        
+                
+                    
+                # CONSTRUCT L_abc
+                
+                proxB = (b + (a+1))
+                
+                recStruc = [ [0,[]] for i in range(nfi - (proxB+1)) ]
+                
+                #print("({},{}): size:{} nfi:{}".format(a,proxB,len(recStruc),nfi))
+                
+                
+                for TID in struc2D[a][b][1]:
+                    
+                    curItem = DATASET[TID]
+                    
+                    c = curItem[0]
+                    proxC = c - (proxB+1)
+                    
+                    if len(curItem) == 1:
+        
+                        recStruc[proxC][0]+=1
+                        
+                    else:
+                        
+                        recStruc[proxC][1].append([0,TID])
+                        
+                    
+                for TID in struc2D[a][b][2]:
+                    
+                    curItem = DATASET[TID]
+                    
+                    c = curItem[0]
+                    proxC = c - (proxB+1)
+                    
+                    if len(curItem) == 1:
+        
+                        recStruc[proxC][0]+=1
+                        
+                    else:
+                        
+                        recStruc[proxC][1].append([0,TID])                   
+                    
+                    
+                for pointer,TID in struc2D[a][b][3]:
+                    
+                    curItem = DATASET[TID]
+                    
+                    if len(curItem) > pointer + 1 :
+                        c = curItem[pointer+1]
+                        proxC = c - (proxB+1)
+                        
+                        recStruc[proxC][1].append([pointer+1,TID])               
+                
+                
+                mark = recFunction(recStruc, [a, proxB ], minSupp, nfi ,DATASET)  
+                
+                
+                
+                freq_marker.extend(mark)
+                
+                
+                
+                
+                
+                
+                
+
             
             # REDISTRIBUTE L_ab to L'ac and also to L_bc
             # ITERATE THROUGH THE ELEMS STORED IN L_ab
@@ -307,11 +509,11 @@ def main(fPath, delimiter, minSuppRate):
                     
                     # STORE TID IN L_#_b
                     struc2D[proxB][proxC][1].append(tid)
- 
+     
                     
                     # STORE L'_a_#
                     struc2D[a][c-(a+1)][2].append(tid)
-
+    
                     
                     # POP THE FIRST ELEMENT OFF. NO LONGER IN USE.
                     DATASET[tid] = DATASET[tid][1:]
@@ -319,7 +521,7 @@ def main(fPath, delimiter, minSuppRate):
                 
             # EMPTY OUT L_ab
             struc2D[a][b][1] = []
-
+    
         # CLEAR ALL OF N_a# , L_a# , L'_a#, L"_a#
         struc2D[a] = 0 
 
@@ -336,10 +538,11 @@ def main(fPath, delimiter, minSuppRate):
     print('Itemset: Min Freq.')
     print('-----------------------------')
     
-    for a,b,freq in freq_marker:
+    for prefix,freq in freq_marker:
         
         #print('Proxy:({},{}) Actual:({},{}) minFreq: {}'.format(a,b+(a+1),sfi[a],sfi[b+(a+1)],freq))
-        print('({},{}): {}'.format(sfi[a],sfi[b+(a+1)],freq))
+        
+        print('{}: {}'.format(sfi[prefix],freq))
             
     print('-----------------------------')
 
@@ -365,7 +568,13 @@ if __name__ == '__main__':
     # delimiter="," 
     # minSuppRate= 0.15
     
-    # ### KOSARAK DATASET
+    
+    # filename = 'nTrn100_nItems20.csv'
+    # file_path = os.path.join(directory, filename)
+    # delimiter="," 
+    # minSuppRate= 0.20   
+    
+    ### KOSARAK DATASET
     filename = 'kosarak.dat'
     file_path = os.path.join(directory, filename)
     delimiter=" "   
