@@ -162,7 +162,7 @@ def main(fPath, delimiter, minSuppRate):
     
     # SINGLE ITEM FREQUENCY ARRAY [0,1,2,......,]
     # EACH INDEX IS AN 'ITEM'
-    sif = np.zeros(nItems+1)      
+    sif = np.zeros(nItems+1).astype(int)      
     
     
 
@@ -171,7 +171,7 @@ def main(fPath, delimiter, minSuppRate):
         sif[trn]+=1    
     
     # LOGICAL ARRAY WHERE 1 IF ITEM'S FREQ. IS >= TO THE ACCEPTED FREQ. ELSE 0
-    logicalIx = sif > minSupp
+    logicalIx = sif >= minSupp
     
     # STORE THE 'ITEMS' THAT HAD A FREQUENCY > 'minSupp'
     # fi: FREQUENT ITEMS
@@ -179,6 +179,7 @@ def main(fPath, delimiter, minSuppRate):
     
     # NUMBER OF 'fi'
     nfi = len(fi)
+
     
     # ffi: FREQUENCY OF FREQUENT ITEMS
     ffi = sif[fi]
@@ -362,20 +363,23 @@ def main(fPath, delimiter, minSuppRate):
              
              
             
-            
+            # WAS (a,b) FREQ. ?
             if isFreq:
                 
-                # UNBOX ALL L' AND L''            
+                ######################
+                # UNBOX ALL L' AND L''   
+                ######################
                 
+                # L'_ai and L''_ai WHERE i < b
                 for i in range(b):
                     
                     
-                        # ITERATE THROUGH THE ELEMS STORED IN L'_ac'
+                        # ITERATE THROUGH THE ELEMS STORED IN L'_ai'
                         for TID in struc2D[a][i][2]:
         
                             curItem = DATASET[TID]   
                             
-                            # L'_ac' to L"_ac, where c is the next elem
+                            # L'_ai to L"_ac, where c is the next elem
                             c = curItem[0]
                             proxC = c - (a+1)
                             
@@ -385,12 +389,12 @@ def main(fPath, delimiter, minSuppRate):
                                 struc2D[a][proxC][3].append([0,TID])
                             
                           
-                        # EMPTY OUT L'a_c'
+                        # EMPTY OUT L'a_i
                         struc2D[a][i][2] = []                      
                     
                     
                     
-                    # ITERATE THROUGH THE ELEMS STORED IN L"_ac"
+                    # ITERATE THROUGH THE ELEMS STORED IN L"_ai
                         for pointer,TID in struc2D[a][i][3]:
                             
                             curItem = DATASET[TID]
@@ -398,7 +402,7 @@ def main(fPath, delimiter, minSuppRate):
                             # MAKE SURE THAT THE ITEMSET HAS ANOTHER ELEM TO POINT
                             if len(curItem) > pointer+1 :
                                 
-                                # L"_ac" to L"_ac , where c is the next elem
+                                # L"_ai to L"_ac , where c is the next elem
                                 c =  curItem[pointer+1]
                                 proxC = c - (a+1)
                                 struc2D[a][proxC][3].append( [pointer+1 , TID] ) 
@@ -410,78 +414,89 @@ def main(fPath, delimiter, minSuppRate):
                                 
                                 
                                 
-                        # EMPTY OUT L"_ac"
+                        # EMPTY OUT L"_ai
                         struc2D[a][i][3] = []
                             
                   
                         
                 
-                    
+                #################
                 # CONSTRUCT L_abc
+                #################
                 
+                # STORE THE PROXY B IN IT'S UNSHIFTED FORM
                 proxB = (b + (a+1))
                 
+                # CREATE THE DATA STRUCTURE FOR THE RECURSION
                 recStruc = [ [0,[]] for i in range(nfi - (proxB+1)) ]
                 
-                #print("({},{}): size:{} nfi:{}".format(a,proxB,len(recStruc),nfi))
-                
-                
+                # L_ab -> L_abc
                 for TID in struc2D[a][b][1]:
                     
+                    # ALL ITEMSETS WILL HAVE ATLEAST ONE ITEM
                     curItem = DATASET[TID]
                     
                     c = curItem[0]
+                    # ALL VALUES OF C MUST BE SHIFTED BY (B+1)
                     proxC = c - (proxB+1)
                     
+                    
                     if len(curItem) == 1:
-        
+                        # L_ab -> N_abc
                         recStruc[proxC][0]+=1
                         
                     else:
-                        
+                        # L_ab -> L_abc
                         recStruc[proxC][1].append([0,TID])
                         
                     
+                # L'_ab -> L_abc
                 for TID in struc2D[a][b][2]:
                     
+                    # ALL ITEMSETS WILL HAVE ATLEAST ONE ITEM
                     curItem = DATASET[TID]
                     
                     c = curItem[0]
+                    # ALL VALUES OF C MUST BE SHIFTED BY (B+1)
                     proxC = c - (proxB+1)
                     
                     if len(curItem) == 1:
-        
+                        # L_ab -> N_abc
                         recStruc[proxC][0]+=1
                         
                     else:
-                        
+                        # L_ab -> L_abc
                         recStruc[proxC][1].append([0,TID])                   
                     
                     
+                # L"_ab -> L_abc
                 for pointer,TID in struc2D[a][b][3]:
                     
+                    # ALL ITEMSETS WILL HAVE ATLEAST ONE ITEM
                     curItem = DATASET[TID]
+                    
                     
                     if len(curItem) > pointer + 1 :
                         c = curItem[pointer+1]
+                        # ALL VALUES OF C MUST BE SHIFTED BY (B+1)
                         proxC = c - (proxB+1)
                         
+                        # L"_ab - L_abc
                         recStruc[proxC][1].append([pointer+1,TID])               
                 
                 
+                # START THE RECURSION FUNCTION
                 mark = recFunction(recStruc, [a, proxB ], minSupp, nfi ,DATASET)  
                 
                 
-                
+                # ADD THE FREQ. ITEMS FROM THE RECURSION TO THE VARIABLE
                 freq_marker.extend(mark)
                 
+                # empty out
+                mark = []
                 
                 
                 
-                
-                
-                
-
             
             # REDISTRIBUTE L_ab to L'ac and also to L_bc
             # ITERATE THROUGH THE ELEMS STORED IN L_ab
@@ -535,12 +550,16 @@ def main(fPath, delimiter, minSuppRate):
     print('Total time:       ',t3-t1)
 
     print('')
-    print('Itemset: Min Freq.')
+    print('Itemset: Min Freq.:{}'.format(len(sfi)+len(freq_marker)))
     print('-----------------------------')
     
-    for prefix,freq in freq_marker:
+    # SINGLE ITEM W/ FREQ.
+    for singlItem,freq in zip(sfi,ffi[idxSort]):
         
-        #print('Proxy:({},{}) Actual:({},{}) minFreq: {}'.format(a,b+(a+1),sfi[a],sfi[b+(a+1)],freq))
+        print('[{}]: {}'.format(singlItem,freq))
+        
+    # N-ITEM W/ FREQ.
+    for prefix,freq in freq_marker:
         
         print('{}: {}'.format(sfi[prefix],freq))
             
@@ -575,12 +594,23 @@ if __name__ == '__main__':
     # minSuppRate= 0.20   
     
     ### KOSARAK DATASET
-    filename = 'kosarak.dat'
+    # filename = 'kosarak.csv'
+    # file_path = os.path.join(directory, filename)
+    # delimiter=","   
+    # minSuppRate = 0.025
+    
+    ### T40I10D100K DATASET
+    filename = 'T40I10D100K.csv'
     file_path = os.path.join(directory, filename)
-    delimiter=" "   
-    minSuppRate = 0.025
+    delimiter=","   
+    minSuppRate = 0.1
     
     
+    ### RETAIL DATA DATASET
+    # filename = 'retailData.csv'
+    # file_path = os.path.join(directory, filename)
+    # delimiter=","   
+    # minSuppRate = 0.01   
     
     
     
