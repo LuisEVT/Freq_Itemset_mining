@@ -42,39 +42,84 @@ def read_file(fPath,delimiter):
 
 
 
-def nextLevel(curNode,lvl,minSupp,nIter,Dataset,freqBar):
+def nextLevel(curNode,lvl,minSupp,nIter,Dataset,freqBar,prefix):
+
+    #print(prefix)
+
+    returnPackages = []
+
+    childNode = [[] for ii in range(nIter)]  
+
+    counter = np.zeros(len(freqBar),dtype=int)
+
+    if nIter > 0 :
+
+        for TID in curNode:
+
+            itemset, pointer = Dataset[TID]
+
+            shift = pointer + lvl
+
+            if len(itemset) - shift > 1 :
+
+                nxtElem = itemset[ shift ]
+
+                childNode[nxtElem - lvl - 1].append(TID)
+
+            elif len(itemset) - shift == 1:
+
+                counter[itemset[-1]] += 1
+
+                if len(itemset) - pointer > 1 :
+
+                    package = [itemset, pointer + 1 ]
+                    returnPackages.append(package)
+
+    else:
+
+        for TID in curNode:
+
+            itemset, pointer = Dataset[TID]
+            package = [itemset, pointer + 1 ]
+            returnPackages.append(package)
 
 
-    childNode = [ [] ] * nIter
-
-    for TID in curNode:
-
-        itemset, pointer = Dataset[TID]
-
-        shift = pointer + lvl
-
-        if len(itemset) - shift > 1 :
-
-            nxtElem = itemset[ shift ]
-            childNode[nxtElem - lvl].append(TID)
-
-        elif len(itemset) - shift == 1:
-
-            freqBar[itemset] -= 1 
-
+    print( [len(tt) for tt in childNode] )
 
     for ii,node in enumerate(childNode,start = lvl):
 
-        if freqBar[ii] >= minSupp and len(node) > 0:
+
+        # ARE YOU FREQUENT?
+        
+        if len(node) + counter[lvl] >= minSupp:
+
+            newPrefix = prefix +  [prefix[0] + ii]
+
+            print('Freq.   ',newPrefix, ': ',len(node) + counter[lvl])
+
             
-            plt.plot(range(len(freqBar)),freqBar,label = lvl)
 
-            print('-',lvl,'-')
-            nextLevel(node,lvl+1,minSupp,nIter-1,Dataset,freqBar)
 
-    
+            # IS THERE ENOUGH ITEMS TO CONTINUE TO THE NEXT LEVEL
 
-    plt.show()
+            maxNumItem = np.min(freqBar[newPrefix])
+
+            if maxNumItem >= minSupp and len(node) > 0:
+                print('NEXT LEVEL')
+                nextLevel(node,lvl+1,minSupp,nIter-1,Dataset,freqBar, newPrefix )
+
+
+            # this should only happen at the highest level
+            # looking for solution
+
+            #freqBar[lvl] -= (len(node) + counter[lvl])
+            #freqBar[prefix[0]] -= (len(node) + counter[lvl])
+
+
+
+    print('')
+
+    return returnPackages
 
 
 
@@ -159,6 +204,9 @@ def main(fPath, delimiter, minSuppRate):
 
     freqBar = np.copy(sffi)
     
+    # print('freq. Item Number')
+    # print(len(fi))
+    # print('')
 
     # NOTE: IN THE LOOP, THE ALGO. WILL IGNORE THE ITEMSETS 
     # THAT DO NOT HAVE THE FREQ.  SINGLE ITEMS. THE TID FOR THESE ITEMSETS WILL NOT BE RECORDED.
@@ -205,17 +253,19 @@ def main(fPath, delimiter, minSuppRate):
 
     for idx,node in enumerate(header):
 
+    
         if freqBar[idx] > minSupp:
 
-            print('------',0,'------')
+            plt.plot(range(len(freqBar)),freqBar,label = idx)
 
-            nextLevel(node,1,minSupp,len(sfi)-1,DATASET,freqBar)
+            nextLevel(node,1,minSupp,len(sfi) - idx - 1,DATASET,freqBar, [idx])
 
             print('')
 
             
-        
-    
+    plt.plot([0,len(fi)-1],[minSupp,minSupp])
+    plt.legend()
+    plt.show()
     
 
 
@@ -250,10 +300,10 @@ if __name__ == '__main__':
     # minSuppRate= 0.20   
     
     ### KOSARAK DATASET
-    # filename = 'kosarak.csv'
-    # file_path = os.path.join(directory, filename)
-    # delimiter=","   
-    # minSuppRate = 0.002
+    filename = 'kosarak.csv'
+    file_path = os.path.join(directory, filename)
+    delimiter=","   
+    minSuppRate = 0.1
     
     ### T40I10D100K DATASET
     # filename = 'T40I10D100K.csv'
@@ -263,10 +313,10 @@ if __name__ == '__main__':
     
     
     ### RETAIL DATA DATASET
-    filename = 'retailData.csv'
-    file_path = os.path.join(directory, filename)
-    delimiter=","   
-    minSuppRate = 0.01
+    # filename = 'retailData.csv'
+    # file_path = os.path.join(directory, filename)
+    # delimiter=","   
+    # minSuppRate = 0.01
     
     
     t1=time.perf_counter()
