@@ -50,15 +50,18 @@ def nextNode(curNode,pShift,minSupp,nIter,Dataset,freqBar,prefix):
         nIter: How many items are left to iterate 
     '''
 
-    idxDiff = len(freqBar) - nIter
+    idxDiff = len(freqBar) - nIter 
 
     childNode = [[] for ii in range(nIter)]
     counter = np.zeros(len(freqBar),dtype=int)
 
+    freqItemset = []
+
     for TID in curNode:
 
         itemset, pointer = Dataset[TID]
-        nItemLeft = len(itemset) - pShift
+
+        nItemLeft = len(itemset) - (pointer + pShift)
 
         if nItemLeft > 1 :
 
@@ -72,31 +75,35 @@ def nextNode(curNode,pShift,minSupp,nIter,Dataset,freqBar,prefix):
 
     for ii,node in enumerate(childNode, start= idxDiff):
 
+        newPrefix = prefix +  [ii]
+        print('Freq.   ',newPrefix, ': ',len(node) + counter[ii])
+
         # ARE YOU FREQUENT?
-        
+
         if len(node) + counter[ii] >= minSupp:
 
-            #print('Prefix:',prefix, ' Item:',ii,' next:',[ii])
             newPrefix = prefix +  [ii]
+            #print('Freq.   ',newPrefix, ': ',len(node) + counter[ii])
 
-            print('Freq.   ',newPrefix, ': ',len(node) + counter[ii])
+            freqItemset.append( [newPrefix,len(node) + counter[ii]] ) 
 
+            #freqBar[ii] -= (len(node) + counter[ii])
             
             # IS THERE ENOUGH ITEMS TO CONTINUE TO THE NEXT LEVEL
             maxNumItem = np.min(freqBar[newPrefix])
 
             if maxNumItem >= minSupp and len(node) > 0 and len(freqBar) - ii > 0 :
-                print('NEXT LEVEL')
-                nextNode(node,pShift+1,minSupp, len(freqBar) - ii,Dataset,freqBar,newPrefix)
+                #print('NEXT LEVEL')
+                freqLst = nextNode(node,pShift+1,minSupp, len(freqBar) - ii - 1,Dataset,freqBar,newPrefix)
+
+                freqItemset.extend(freqLst)
 
 
-            # this should only happen at the highest level
-            # looking for solution
-
-            freqBar[ii] -= (len(node) + counter[ii])
-            #freqBar[prefix[0]] -= (len(node) + counter[lvl])
 
 
+
+
+    return freqItemset
 
 
 
@@ -139,6 +146,8 @@ def main(fPath, delimiter, minSuppRate):
     
     # MINIMUM SUPPORT ( RATE * # OF TRANSACTIONS)
     minSupp = int(round(minSuppRate*nTrans,0))
+
+    print('MIN SUPPORT:',minSupp)
     
     ################################
     
@@ -184,8 +193,6 @@ def main(fPath, delimiter, minSuppRate):
     header = [ [] for ii in range(len(fi))]
 
     freqBar = np.copy(sffi)
-    
-    resevoir = np.zeros(len(header)).tolist()
 
 
     # NOTE: IN THE LOOP, THE ALGO. WILL IGNORE THE ITEMSETS 
@@ -216,12 +223,12 @@ def main(fPath, delimiter, minSuppRate):
 
 
     # plt.figure(1)
-    plt.plot(range(len(sfi)),sffi)
+    #plt.bar(range(len(sfi)),sffi)
     # plt.plot([0,len(fi)],[minSupp,minSupp])
     # plt.yscale('log')
 
     # plt.figure(2)
-    plt.plot(range(len(sfi)),freqBar)
+    #plt.bar(range(len(sfi)),freqBar)
     # plt.plot([0,len(fi)],[minSupp,minSupp])
     # plt.yscale('log')
 
@@ -231,44 +238,82 @@ def main(fPath, delimiter, minSuppRate):
     # print(len(fi))
     # print('')
 
-    for idx,node in enumerate(header):
+    freqItemsets = []
 
+
+    for idx,node in enumerate(header):
     
         if freqBar[idx] > minSupp and len(sfi) - (idx + 1) > 0:
 
-            #plt.plot(range(len(freqBar)),freqBar)
+            print('')
+            print('Item:',idx,' freq:',freqBar[idx])
+            print('')
 
-            nextNode(node, 1 , minSupp,len(sfi) - (idx + 1),DATASET,freqBar, [idx])
+            #plt.bar(range(len(freqBar)),freqBar)
 
-        else:
+            freqItemTmp = ( nextNode(node, 1 , minSupp,len(sfi) - (idx + 1),DATASET,freqBar, [idx]) )
 
-            for TID in node:
+            #freqBar[idx] -= len(freqItemTmp)
 
-                itemset, pointer = DATASET[TID]
+            freqItemsets.extend(freqItemTmp)
 
-                remainItems = len(itemset) - (pointer+1)
+        
+        for TID in node:
 
-                if remainItems > 1 :
+            itemset, pointer = DATASET[TID]
+            nextPointer = (pointer+1)
+            remainItems = len(itemset) - nextPointer
 
-                    fElem = itemset[0]
-                    #resevoir[fElem].append(TID)
-                    #header[fElem].append(TID)
-                    DATASET[TID] = [itemset,pointer + 1]
-                    
-                elif remainItems == 1:
-                    
-                    fElem = itemset[0]
-                    freqBar[fElem] -= 1
+            if remainItems > 1 :
+
+                fElem = itemset[nextPointer]
+                #resevoir[fElem].append(TID)
+                header[fElem].append(TID)
+                DATASET[TID] = [itemset,nextPointer]
+                
+                #freqBar[itemset[pointer]] -= 1
 
 
 
-    plt.plot(range(len(freqBar)),freqBar)  
 
-    plt.plot([0,len(fi)-1],[minSupp,minSupp],linestyle = '--')
-    plt.yscale('log')
-    #plt.legend()
-    plt.title('Number of Freq. Items:{}'.format(len(sfi)))
-    plt.show()
+    t3 = time.perf_counter()
+    
+    mineTime = t3 - t2
+
+    totalTime = readTime + mineTime
+
+
+    itemsets = []
+
+    # SINGLE ITEM W/ FREQ.
+    for singlItem,freq in zip(sfi,sffi):
+        
+        itemsets.append([[singlItem],freq])
+
+        print(itemsets[-1])
+        
+    # N-ITEM W/ FREQ.
+    for prefix,freq in freqItemsets:
+  
+        itemsets.append([sfi[prefix],freq])
+
+        print(itemsets[-1])
+
+
+
+
+
+    return totalTime, readTime, mineTime, len(sfi), itemsets
+
+
+
+    # plt.bar(range(len(freqBar)),freqBar)  
+
+    # plt.plot([0,len(fi)-1],[minSupp,minSupp],linestyle = '--',color = 'k')
+    # plt.yscale('log')
+    # #plt.legend()
+    # plt.title('Number of Freq. Items:{}'.format(len(sfi)))
+    # plt.show()
     
 
 
@@ -303,10 +348,10 @@ if __name__ == '__main__':
     # minSuppRate= 0.20   
     
     ### KOSARAK DATASET
-    # filename = 'kosarak.csv'
-    # file_path = os.path.join(directory, filename)
-    # delimiter=","   
-    # minSuppRate = 0.1
+    filename = 'kosarak.csv'
+    file_path = os.path.join(directory, filename)
+    delimiter=","   
+    minSuppRate = 0.05
     
     ### T40I10D100K DATASET
     # filename = 'T40I10D100K.csv'
@@ -316,17 +361,17 @@ if __name__ == '__main__':
     
     
     ### RETAIL DATA DATASET
-    filename = 'retailData.csv'
-    file_path = os.path.join(directory, filename)
-    delimiter=","   
-    minSuppRate = 0.01
+    # filename = 'retailData.csv'
+    # file_path = os.path.join(directory, filename)
+    # delimiter=","   
+    # minSuppRate = 0.01
     
     
-    t1=time.perf_counter()
+    # t1=time.perf_counter()
     main(file_path,delimiter,minSuppRate)
-    t2=time.perf_counter()
+    # t2=time.perf_counter()
     
-    totalTime = t2-t1
+    # totalTime = t2-t1
     
     
     # for itemset,freq in itemsets:

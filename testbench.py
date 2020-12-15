@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from freqMining import main
+#from freq_mining import main
 import os.path
 import time
 import pandas as pd
@@ -109,12 +110,11 @@ if __name__ == '__main__':
     directory = './datasets/'
 
     ### KOSARAK DATASET
-    # filename = 'kosarak.csv'
-    # delimiter=","   
-    # minSuppRateLst = [0.06, 0.07, 0.08, 0.09, 0.1] 
-    # datasetTestbench(filename, delimiter, minSuppRateLst, directory)
-
-    #plot(filename = 'kosarakData.csv',directory='./TestbenchData')
+    filename = 'kosarak.csv'
+    delimiter=","   
+    minSuppRateLst = [0.05, 0.10, 0.15, 0.20, 0.25,0.30]
+    datasetTestbench(filename, delimiter, minSuppRateLst, directory)
+    plot(filename = 'kosarakData.csv',directory='./TestbenchData')
 
 
     ### T40I10D100K DATASET
@@ -122,5 +122,12 @@ if __name__ == '__main__':
     # delimiter=","   
     # minSuppRateLst = [0.1, 0.2, 0.3, 0.4, 0.5]
     # datasetTestbench(filename, delimiter, minSuppRateLst, directory)
-
     # plot(filename = 'T40I10D100KData.csv',directory='./TestbenchData')
+
+    ### RETAIL DATA DATASET
+    #filename = 'retailData.csv'
+    #file_path = os.path.join(directory, filename)
+    #delimiter=","   
+    #minSuppRateLst = [0.05,0.10,0.15,0.20,0.25,0.30]
+    #datasetTestbench(filename, delimiter, minSuppRateLst, directory)
+    #plot(filename = 'retailDataData.csv',directory='./TestbenchData')
