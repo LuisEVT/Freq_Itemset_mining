@@ -252,52 +252,41 @@ def lvlN(parent,Lp,count,minSupp,Dataset,prefix,nFI = 10):
                 break
 
 
-            idxDiffX = prefix[idxMaxLp] + 1
-
-            idxMaxElem = np.argmax(lpSums[idxMaxLp])
-
             
-            # ccLpN = [ elem[1] for elem in LpN ]
 
-            # if frequency + sum(ccLpN) < minSupp:
-            #     #print(frequency + sum(sumLp))
-            #     break
-
-            # idxMaxLp = np.argmax(ccLpN)
-
-            # idxDiffX = prefix[idxMaxLp] + 1
-
-
-            # cLpN = [ len(elem) for elem in LpN[idxMaxLp][0][:idxDiffX] ]
-
-            # if frequency + sum(cLpN) < minSupp:
-            #     #print(frequency + sum(sumLp))
-            #     break
-
-            # idxMax = np.argmax( cLpN )
-
-            
+            idxMaxElem = np.argmax(lpSums[idxMaxLp])            
 
             for package in LpN[idxMaxLp][0][idxMaxElem]:
 
                 TID, pointer = package
                 itemset = Dataset[TID]
+
+
                 newPointer = pointer + 1
 
                 nItemLeft = len(itemset) - newPointer
 
                 if nItemLeft > 1 :
 
-                    nxtElem = itemset[ newPointer ]
-                    LpN[idxMaxLp][0][nxtElem - idxDiffX].append( [ TID, newPointer ] )
+                    for jj,pp in enumerate(prefix[idxMaxLp:],start = idxMaxLp):
+
+                        idxDiffX = pp + 1
+
+                        nxtElem = itemset[ newPointer ]
+                        LpN[jj][0][nxtElem - idxDiffX].append( [ TID, newPointer ] )
             
                 elif nItemLeft == 1:
 
                     # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
                     # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
-                    countN[idxMaxLp][itemset[-1] - idxDiffX ] += 1
 
-                    LpN[idxMaxLp][1] -= 1
+                    for jj,pp in enumerate(prefix[idxMaxLp:],start = idxMaxLp):
+
+                        idxDiffX = pp + 1
+                        countN[jj][itemset[-1] - idxDiffX ] += 1
+
+
+                    #LpN[idxMaxLp][1] -= 1
 
 
             LpN[idxMaxLp][0][idxMaxElem] = []
