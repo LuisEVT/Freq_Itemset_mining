@@ -5,7 +5,7 @@ from scipy.special import comb as nCr
 import time
 
 import matplotlib.pyplot as plt
-
+import copy
 
 def read_file(fPath,delimiter):  
     '''
@@ -109,17 +109,21 @@ def lvl2(parents,minSupp,Dataset,prefix,nFI = 10):
 
                 freqItemset.append([newPrefix,frequency])
 
-                freqItemset.extend( lvlN(node,[resV],[count],minSupp,Dataset,newPrefix,nFI) )
+                a = copy.deepcopy(resV)
+                b = count[:]
+
+                freqItemset.extend( lvlN(node,[a],[b],minSupp,Dataset,newPrefix,nFI) )
 
                 break
 
+            sumLp = [ len(elem) for elem in resV[0][:ii] ]
 
-            if frequency + resV[1] < minSupp:
+            if frequency + sum(sumLp) < minSupp:
                 #print(frequency + sum(sumLp))
                 break
             
 
-            sumLp = [ len(elem) for elem in resV[0][:idx] ]
+            
             idxMax = np.argmax(sumLp)
 
             for package in resV[0][idxMax]:
@@ -224,11 +228,16 @@ def lvlN(parent,Lp,count,minSupp,Dataset,prefix,nFI = 10):
 
             print('Freq.   ',newPrefix, ': ',frequency )
 
+
             if frequency  >= minSupp:
 
                 freqItemset.append([newPrefix,frequency])
+                print('--')
 
-                freqItemset.extend( lvlN(node,LpN,count,minSupp,Dataset,newPrefix) )
+                a = copy.deepcopy(LpN)
+                b = copy.deepcopy(countN)
+
+                freqItemset.extend( lvlN(node,a,b,minSupp,Dataset,newPrefix) )
 
                 break
 
@@ -238,24 +247,36 @@ def lvlN(parent,Lp,count,minSupp,Dataset,prefix,nFI = 10):
             lpSums = []
             lpSumsX = []
 
-            for pre,Lp in zip(prefix,LpN):
+            for yy in range(len(prefix) - 1):
 
-                idxDiffX = pre + 1
+                idxDiffX = (prefix[yy + 1] - prefix[yy])  # want to include it
 
-                lpSums.append([ len(elem) for elem in Lp[0][:idx - idxDiffX] ])
+                lpSums.append([ len(elem) for elem in LpN[yy][0][:idxDiffX ] ])
                 lpSumsX.append(sum(lpSums[-1]))
+
+
+            lpSums.append([ len(elem) for elem in LpN[-1][0][:ii] ])
+            lpSumsX.append(sum(lpSums[-1]))
+
+
 
             idxMaxLp = np.argmax(lpSumsX)
 
+            print('Node:',len(node))
+            print('Rev:',len(LpN[-1][0][ii]))
+            print('count:',countN[-1][ii])
+
+            print(lpSums)
+            print(lpSumsX)
+            print(frequency + sum(lpSumsX))
             if frequency + sum(lpSumsX) < minSupp:
                 #print(frequency + sum(sumLp))
                 break
 
 
-            
 
             idxMaxElem = np.argmax(lpSums[idxMaxLp])            
-
+            print(idxMaxLp,' ',idxMaxElem)
             for package in LpN[idxMaxLp][0][idxMaxElem]:
 
                 TID, pointer = package
@@ -263,27 +284,31 @@ def lvlN(parent,Lp,count,minSupp,Dataset,prefix,nFI = 10):
 
 
                 newPointer = pointer + 1
-
                 nItemLeft = len(itemset) - newPointer
 
                 if nItemLeft > 1 :
 
-                    for jj,pp in enumerate(prefix[idxMaxLp:],start = idxMaxLp):
-
-                        idxDiffX = pp + 1
+                    for xx in range( idxMaxLp, len(lpSumsX)):
 
                         nxtElem = itemset[ newPointer ]
-                        LpN[jj][0][nxtElem - idxDiffX].append( [ TID, newPointer ] )
+
+                        idxDiffX =  newPrefix[xx+1] + 1
+
+                        LpN[xx][0][nxtElem - idxDiffX].append( [ TID, newPointer ] )
             
                 elif nItemLeft == 1:
 
                     # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
                     # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
 
-                    for jj,pp in enumerate(prefix[idxMaxLp:],start = idxMaxLp):
+                   for xx in range( idxMaxLp, len(lpSumsX)):
 
-                        idxDiffX = pp + 1
-                        countN[jj][itemset[-1] - idxDiffX ] += 1
+                        nxtElem = itemset[ newPointer ]
+
+                        idxDiffX =  newPrefix[xx+1] + 1
+
+                        countN[xx][itemset[-1] - idxDiffX ] += 1
+
 
 
                     #LpN[idxMaxLp][1] -= 1
@@ -306,7 +331,7 @@ def lvlN(parent,Lp,count,minSupp,Dataset,prefix,nFI = 10):
                 nxtElem = itemset[ newPointer ]
                 LpN[-1][0][nxtElem - idxDiff].append( [ TID, newPointer ] )
 
-                LpN[-1][1] += 1
+                # LpN[-1][1] += 1
         
             elif nItemLeft == 1:
 
