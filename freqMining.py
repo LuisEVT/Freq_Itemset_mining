@@ -41,297 +41,40 @@ def read_file(fPath,delimiter):
     return originalData,nItems
 
 
-def lvl2(parents,minSupp,Dataset,prefix,nFI = 10):
-
-
-    kk = prefix[-1]
-    arrSize = nFI - prefix[-1] - 1
-    idxDiff = kk + 1
-
-    # PACKAGES FOR THIS LEVEL
-    childNode = [ [] for ii in range(arrSize)]
-
-    # [ RESEVOIR , TOTAL COUNT IN RESEVOIR ] , [COUNT FOR EACH CHILD NODE ( WHEN ITEMSET NO LONGER HAS MORE ELEMENTS) ]
-    resV = [ [ [] for ii in range(arrSize) ] , 0 ] 
-    count = [ 0 for ii in range(arrSize) ] 
-
-
-    for package in parents[kk]:
-
-        TID, pointer = package
-        newPointer = pointer+ 1
-
-        itemset = Dataset[TID]
-        nItemLeft = len(itemset) - newPointer
-
-        if nItemLeft > 1 :
-
-            # THIS IS THE DATA I'M SENDING TO THE NEXT LEVELS, IF THERE IS SUCH OCCURANCE
-            nxtElem = itemset[newPointer]
-            childNode[nxtElem - idxDiff].append( [ TID, newPointer] )
-            parents[nxtElem].append( [ TID,newPointer] )
-
-        elif nItemLeft == 1:
-
-            # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
-            # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
-            count[itemset[-1] - idxDiff ] += 1
-
-    freqItemset = [] 
-
-    nPackages = sum( [ len(elem) for elem in parents[kk]] )
-
-    # ENSURE THAT THE SINGLE ITEMSET HAS ENOUGH SETS TO EVEN DIVE IN DEEPER
-    if  nPackages < minSupp:
-        return freqItemset
-
-
-    print('')
-    print('Item:',kk,' freq:',len(parents[kk]) )
-    print('')
-
-    # LOOK AT EACH OF THE RANK 2 NODES 
-    # AND DETERMINE IF THEY HAVE ENOUGH SETS TO BE FREQUENT
-    for ii,node in enumerate(childNode):
-        
-
-        idx = kk + 1 + ii
-
-        print('')
-        while(True):
-
-            newPrefix = prefix +  [idx]
-            frequency = len(node) + count[ii] + len(resV[0][ii])
-
-            print('Freq.   ',newPrefix, ': ',frequency )
-
-            if frequency  >= minSupp:
-
-                freqItemset.append([newPrefix,frequency])
-
-                #freqItemset.extend( nextLevel(node,[resV],minSupp,Dataset,newPrefix) )
-
-                break
-
-
-            if frequency + resV[1] < minSupp:
-                #print(frequency + sum(sumLp))
-                break
-            
-
-            sumLp = [ len(elem) for elem in resV[0][:idx] ]
-            idxMax = np.argmax(sumLp)
-
-            for package in resV[0][idxMax]:
-
-                TID, pointer = package
-                itemset = Dataset[TID]
-                newPointer = pointer + 1
-
-                nItemLeft = len(itemset) - newPointer
-
-                if nItemLeft > 1 :
-
-                    nxtElem = itemset[ newPointer ]
-                    resV[0][ nxtElem - idxDiff ].append( [ TID, newPointer ] )
-            
-                elif nItemLeft == 1:
-
-                    resV[1] -= 1
-
-                    # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
-                    # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
-                    count[itemset[-1] - idxDiff ] += 1
-
-            resV[0][idxMax] = []
-
-
-        for package in node:
-
-            TID, pointer = package
-            itemset = Dataset[TID]
-            newPointer = pointer + 1
-
-            nItemLeft = len(itemset) - newPointer
-
-            if nItemLeft > 1 :
-
-                nxtElem = itemset[ newPointer ]
-                resV[0][ nxtElem - idxDiff ].append( [ TID, newPointer ] )
-                resV[1] += 1
-        
-            elif nItemLeft == 1:
-
-                # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
-                # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
-                count[itemset[-1] - idxDiff ] += 1
-
-            
-    return freqItemset
-
-
-    
-def lvlN(parent,Lp,count,minSupp,Dataset,prefix,nFI = 10):
-
-
-    
-    kk = prefix[-1]
-
-    arrSize = len(Lp) - prefix[-1] - 1
-    childNode = [[] for ii in range(arrSize)]
-    counter = np.zeros(arrSize,dtype=int)
-
-    # RESEVOIR FOR THIS LEVEL
-    LpN =  Lp + [[] for ii in range(arrSize)]
-    countN = count + [ 0 for ii in range(arrSize)]
-
-    idxDiff = kk + 1
-
-    for package in parent:
-
-        TID, pointer = package
-        newPointer = pointer + 1
-
-        itemset = Dataset[TID]
-        nItemLeft = len(itemset) - newPointer
-
-        if nItemLeft > 1 :
-
-            # THIS IS THE DATA I'M SENDING TO THE NEXT LEVELS, IF THERE IS SUCH OCCURANCE
-            nxtElem = itemset[newPointer]
-            childNode[nxtElem - idxDiff].append( [ TID, newPointer] )
-
-        elif nItemLeft == 1:
-
-            # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
-            # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
-            countN[-1][itemset[-1] - idxDiff ] += 1
-
-
-    freqItemset = []   
-
-
-    # LOOK AT EACH OF THE RANK 2 NODES 
-    # AND DETERMINE IF THEY HAVE ENOUGH SETS TO BE FREQUENT
-    for ii,node in enumerate(childNode):
-
-        idx = kk + 1 + ii
-
-        print('')
-        while(True):
-
-            newPrefix = prefix +  [idx]
-            frequency = len(node) + count[-1][ii] + len(LpN[-1][idx])
-
-            print('Freq.   ',newPrefix, ': ',frequency )
-
-            if frequency  >= minSupp:
-
-                freqItemset.append([newPrefix,frequency])
-
-                freqItemset.extend( lvlN(node,LpN,count,minSupp,Dataset,newPrefix) )
-
-                break
-
-            
-            
-            ccLpN = [ elem[1] for elem in LpN ]
-
-            if frequency + sum(ccLpN) < minSupp:
-                #print(frequency + sum(sumLp))
-                break
-            
-
-            idxMaxLp = np.argmax(ccLpN)
-
-            idxMax = np.argmax([ len(elem) for elem in LpN[idxMaxLp]])
-
-            for package in LpN[idxMaxLp][idxMax]:
-
-                TID, pointer = package
-                itemset = Dataset[TID]
-                newPointer = pointer + 1
-
-                nItemLeft = len(itemset) - newPointer
-
-                if nItemLeft > 1 :
-
-                    nxtElem = itemset[ newPointer ]
-                    LpN[idxMaxLp][nxtElem].append( [ TID, newPointer ] )
-            
-                elif nItemLeft == 1:
-
-                    # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
-                    # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
-                    counter[itemset[-1] - idxDiff ] += 1
-
-            LpN[idxMaxLp][idxMax] = []
-
-
-        for package in node:
-
-            TID, pointer = package
-            itemset = Dataset[TID]
-            newPointer = pointer + 1
-
-            nItemLeft = len(itemset) - newPointer
-
-            if nItemLeft > 1 :
-
-                nxtElem = itemset[ newPointer ]
-                LpN[nxtElem].append( [ TID, newPointer ] )
-        
-            elif nItemLeft == 1:
-
-                # KEEP COUNT OF THE ITEMSET, SINCE IT NO LONGER HAS MORE ELEMENTS
-                # BUT I AM STILL INTERESTED IN KNOWING THE COUNT FOR THIS GIVEN SET
-                counter[itemset[-1] - idxDiff ] += 1
-
-        #print(counter)
-            
-    return freqItemset
-
-
-
-
-
-
 
 def main(fPath, delimiter, minSuppRate):
     '''
     Parameters:
         fName: File name of the dataset
         delimiter: what is used to seperate the data in the file
-        minSuppRate: minimum support rate of accepted frequencies
-       
+        minSuppRate: minimum support rate of accepted frequencies 
     '''
 
-    t1=time.perf_counter()
+    t1 = time.perf_counter()
     
     # STORES A LIST OF 'SETS'
     # EACH ELEMENT IS A TRANSACTION WITH SOME 'LIST'
     # nItems: number of unique elements in the dataset
-    DATASET,nItems = read_file(fPath,delimiter)
+    DATASET , nItems = read_file(fPath,delimiter)
     
-    t2=time.perf_counter()
+    t2 = time.perf_counter()
     
     readTime = t2 - t1
     
-    ########################
-    ###  INITIALIZATION  ###
-    ########################
+    # ------------------
+    #  INITIALIZATION  
+    # ------------------
     
 
-    ################################
+    # ---------------------------------------------
     # NUMBER OF TRANSACTIONS        
     nTrans = len(DATASET)  
     
     # MINIMUM SUPPORT ( RATE * # OF TRANSACTIONS)
     minSupp = int(round(minSuppRate*nTrans,0))
     
-    ################################
-    
-    # SINGLE ITEM FREQUENCY ARRAY [0,1,2,......,]
+    # ---------------------------------------------
+    # SINGLE ITEM FREQUENCY ARRAY [0,1,2,......]
     # EACH INDEX IS AN 'ITEM'
     singleIF = np.zeros(nItems+1).astype(int)      
 
@@ -344,37 +87,34 @@ def main(fPath, delimiter, minSuppRate):
     
     # STORE THE 'ITEMS' THAT HAVE A FREQUENCY > 'minSupp'
     # fi: FREQUENT ITEMS
-    fi = np.where( logicalIx )[0].astype(int)
+    fI= np.where( logicalIx )[0].astype(int)
+
+    # NUMBER OF FREQ. ITEMS
+    nFI = len(fI)
 
     # ffi: FREQUENCY OF FREQUENT ITEMS
-    ffi = singleIF[fi]
+    ffi = singleIF[fI]
     
     # INDECES OF THE SORTED 'ffi' IN ASCENDING ORDER
     idxSort = np.argsort(ffi)  #(0: less freq )
     
     # sfi: SORTED FREQ. ITEMS
     # SORT THE FREQ. ITEMS FROM SMALLEST FREQ. TO LARGEST FREQ.
-    sfi = fi[idxSort]
+    sfi = fI[idxSort]
 
     # sffi: SORTED FREQUENCY OF FREQUENT ITEMS
     sffi = ffi[idxSort]
     
     # WILL BE USED IN PLACE OF THE 'fi' FOR THE ALGORITHM
     # INDEX 0 INDICATES THE SMALLEST FREQ. ITEM
-    proxyIID = np.arange(0, len(fi) )    
+    proxyIID = np.arange(0, len(fI) )    
     
     # WILL BE USED TO SELECT THE ITEMS PER TRANSACTION
     indicator = np.zeros(nItems+1,dtype=bool)
 
-    # STORE THE TID OF EACH TRANSACTION, USING THE FIRST ELEMENT
-    L = [ [] for ii in range(len(fi))]
-    Lp = [ [] for ii in range(len(fi))]
+    Mtx = np.zeros( (nFI+1, nFI+1) )
 
 
-    # NOTE: IN THE LOOP, THE ALGO. WILL IGNORE THE ITEMSETS 
-    # THAT DO NOT HAVE THE FREQUENT SINGLE ITEMS; THE TID FOR THESE ITEMSETS WILL NOT BE RECORDED.
-    # IN THE PROCESS, THE ITEMSET THAT DO HAVE THE FREQ. ITEMS WILL BE REWRITTEN USING THE PROXY ID.
-    # THE PROXY ITEMSET WILL BE STORED IN THE TID.
     for TID,itemset in enumerate(DATASET):
         
         # GET FREQUENT ITEMS FROM CURRENT ITEMSET
@@ -385,23 +125,30 @@ def main(fPath, delimiter, minSuppRate):
 
         if len(curItemset) > 1 :
 
-            fElem = curItemset[0]
-            L[fElem].append( [ TID, 0 ] )
-            DATASET[TID] = curItemset
+            for ii in curItemset:
+                for jj in curItemset:
 
+                    if ii == jj:
+                        break
+                        
+                    Mtx[ii,jj] += 1
+                    
         # CLEAR THE INDICATOR FOR REUSE
         indicator[itemset] = 0   
 
+    itemsets = [ [ [x],y ] for x,y in zip(sfi,sffi) ]
 
-    freqItemsets = []
+    for ii in range(Mtx.shape[0]):
+        for jj in range(Mtx.shape[1]):
 
+            if ii == jj:
+                break
 
-    for idx in proxyIID:
+            if Mtx[ii,jj] >= minSupp : 
+                #itemsets.append([ (ii,jj),Mtx[ii,jj] ])
+                itemsets.append([ list(sfi[[ii,jj]]), Mtx[ii,jj] ])
 
-        freqItemsets.extend( lvl2(L,minSupp,DATASET,[idx],nFI = len(fi)) )
-
-
-
+                
 
 
 
@@ -409,40 +156,11 @@ def main(fPath, delimiter, minSuppRate):
     mineTime = t3 - t2
 
 
-    itemsets = []
-
-    # SINGLE ITEM W/ FREQ.
-    for singlItem,freq in zip(sfi,sffi):
-        
-        itemsets.append([[singlItem],freq])
-        
-    # N-ITEM W/ FREQ.
-    for prefix,freq in freqItemsets:
-  
-        itemsets.append([list(sfi[prefix]),freq])
 
 
 
-
-
-    return minSupp, readTime, mineTime, len(sfi), itemsets
-
+    return minSupp, readTime, mineTime, nFI, itemsets
     
-
-
-    
-    
-
-    
-    
-
-    
-
-    
-
-
-
-
 
 if __name__ == '__main__':
     
@@ -464,7 +182,7 @@ if __name__ == '__main__':
     filename = 'kosarak.csv'
     file_path = os.path.join(directory, filename)
     delimiter=","   
-    minSuppRate = 0.05
+    minSuppRate = 0.02
     
     ### T40I10D100K DATASET
     # filename = 'T40I10D100K.csv'
@@ -482,6 +200,7 @@ if __name__ == '__main__':
     
     t1=time.perf_counter()
     minSupp, readTime, mineTime, nsfi, itemsets = main(file_path,delimiter,minSuppRate)
+    #main(file_path,delimiter,minSuppRate)
     t2=time.perf_counter()
     
     totalTime = t2-t1
@@ -497,13 +216,10 @@ if __name__ == '__main__':
     print('-----------------------------')
     print('Itemset | Freq | Total:{}'.format(len(itemsets)))
     print('-----------------------------')
-
-    
-    for itemset,freq in itemsets:
-        
-        print('{}: {}'.format(itemset,freq))
-    
-    print('-----------------------------')
+    # print('-----------------------------')
+    # for itemset,freq in itemsets:
+    #     print('{}: {}'.format(itemset,freq))
+    # print('-----------------------------')
     
     
     
