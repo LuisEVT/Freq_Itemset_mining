@@ -41,6 +41,28 @@ def read_file(fPath,delimiter):
     return originalData,nItems
 
 
+def nextLevels(Mtx,maxItem,minSupp,prefix,prevCount,nextItem):
+
+    freqItems = []
+
+    if nextItem <= maxItem:
+
+        # CHECK IF (LEAD,NEXT ITEM) >= MIN SUPPORT AND 
+        check1 = np.minimum( prevCount , Mtx[ prefix[0] , nextItem ] )
+
+        #   (LAST ITEM,NEXT ITEM) >= MIN SUPPORT
+        newMin = np.minimum( check1, Mtx[ prefix[-1] ,nextItem] )  
+
+        if newMin >= minSupp:
+            newPrefix = prefix+[nextItem]
+            freqItems.append(  [newPrefix,newMin ]  )
+
+            freqItems.extend( nextLevels(Mtx,maxItem,minSupp,newPrefix,newMin,nextItem+1) )
+        
+
+        freqItems.extend( nextLevels(Mtx,maxItem,minSupp,prefix,prevCount,nextItem+1) )
+
+    return freqItems
 
 def main(fPath, delimiter, minSuppRate):
     '''
@@ -81,6 +103,8 @@ def main(fPath, delimiter, minSuppRate):
     # ADD 1 TO THE ITEM IF IT'S IN THE TRANSACTION
     for trn in DATASET:
         singleIF[trn]+=1    
+
+    
     
     # LOGICAL ARRAY WHERE 1 IF ITEM'S FREQ. IS >= TO THE ACCEPTED FREQ. ELSE 0
     logicalIx = singleIF >= minSupp
@@ -127,9 +151,8 @@ def main(fPath, delimiter, minSuppRate):
 
             for ii in curItemset:
                 for jj in curItemset:
-
-                    if ii == jj:
-                        break
+                    # if ii == jj:
+                    #     break
                         
                     Mtx[ii,jj] += 1
                     
@@ -141,15 +164,18 @@ def main(fPath, delimiter, minSuppRate):
     for ii in range(Mtx.shape[0]):
         for jj in range(Mtx.shape[1]):
 
-            if ii == jj:
-                break
+            if ii >= jj:
+                continue
 
             if Mtx[ii,jj] >= minSupp : 
-                #itemsets.append([ (ii,jj),Mtx[ii,jj] ])
-                itemsets.append([ list(sfi[[ii,jj]]), Mtx[ii,jj] ])
+                itemsets.append([ (ii,jj),Mtx[ii,jj] ])
+                #itemsets.append([ list( sfi[[ii,jj]] ), Mtx[ii,jj] ])
+
+                itemsets.extend( nextLevels(Mtx,nFI,minSupp,[ii,jj],Mtx[ii,jj],jj+1) )
+
+                t = 1
 
                 
-
 
 
     t3 = time.perf_counter()
@@ -182,7 +208,7 @@ if __name__ == '__main__':
     filename = 'kosarak.csv'
     file_path = os.path.join(directory, filename)
     delimiter=","   
-    minSuppRate = 0.02
+    minSuppRate = 0.05
     
     ### T40I10D100K DATASET
     # filename = 'T40I10D100K.csv'
@@ -216,10 +242,10 @@ if __name__ == '__main__':
     print('-----------------------------')
     print('Itemset | Freq | Total:{}'.format(len(itemsets)))
     print('-----------------------------')
-    # print('-----------------------------')
-    # for itemset,freq in itemsets:
-    #     print('{}: {}'.format(itemset,freq))
-    # print('-----------------------------')
+    print('-----------------------------')
+    for itemset,freq in itemsets:
+        print('{}: {}'.format(itemset,freq))
+    print('-----------------------------')
     
     
     
